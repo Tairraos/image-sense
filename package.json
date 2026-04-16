@@ -1,0 +1,51 @@
+{
+  "name": "image-sense",
+  "version": "0.1.0",
+  "description": "使用本地 OpenAI 兼容 VLM（带视觉能力）批量识别图片并给出中文改名建议，输出/执行 mv 改名命令",
+  "type": "module",
+  "bin": {
+    "image-sense": "src/cli.js"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "files": [
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "cli",
+    "openai-compatible",
+    "vision",
+    "vlm",
+    "rename",
+    "chinese"
+  ],
+  "license": "MIT",
+  "author": "tairraos",
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:Tairraos/image-sense.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Tairraos/image-sense/issues"
+  },
+  "homepage": "https://github.com/Tairraos/image-sense#readme",
+  "engines": {
+    "node": ">=18"
+  },
+  "preferGlobal": true,
+  "packageManager": "pnpm@10.28.0",
+  "dependencies": {
+    "openai": "^4.86.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.1.0",
+    "globals": "^17.4.0",
+    "prettier": "^3.8.1"
+  }
+}
