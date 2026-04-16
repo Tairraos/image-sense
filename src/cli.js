@@ -5,7 +5,8 @@
  * 需求要点：
  * - 读取当前目录下所有 jpg/png 文件
  * - 使用 OpenAI 兼容 VLM（带视觉能力）识别图片内容，输出中文新文件名
- * - 支持 -c/-p/-b/-n（出现顺序决定文件名词序），-s 可保存到脚本/文本文件
+ * - 支持 -c/-p/-b/-n（出现顺序决定文件名词序）
+ * - 支持 --html：生成 rename.html（可预览图片、编辑新文件名、复制 mv 命令）
  */
 
 import fs from "node:fs/promises";
@@ -14,10 +15,11 @@ import path from "node:path";
 import { getCliOptions } from "./options.js";
 import { listImageFiles, createRenamePlanner } from "./rename.js";
 import { analyzeImage } from "./vlm.js";
+import { buildRenameHtml } from "./html.js";
 
 async function main() {
   const startedAt = Date.now();
-  const { tokenOrder, saveFileName, autoRename } = getCliOptions(process.argv);
+  const { tokenOrder, html } = getCliOptions(process.argv);
 
   const cwd = process.cwd();
   console.log(`开始扫描目录：${cwd}`);
@@ -40,8 +42,10 @@ async function main() {
   let nextToPlan = 0;
   /** @type {string[]} */
   const mvLines = [];
-  /** @type {{ oldName: string, newName: string }[]} */
-  const operations = [];
+  /**
+   * @type {Array<{ oldName: string, newName: string, status: "ok" | "error" | "empty", note?: string }>}
+   */
+  const items = [];
 
   function flushPlans() {
     while (nextToPlan < images.length && results[nextToPlan]) {
@@ -51,6 +55,7 @@ async function main() {
       if (r.error) {
         mvLines.push(`# 跳过（识别失败）：${oldName}`);
         planned += 1;
+        items.push({ oldName, newName: "", status: "error", note: "识别失败" });
         console.log(`[${planned}/${images.length}] 完成：${oldName} 建议更名：跳过（识别失败）`);
         nextToPlan += 1;
         continue;
@@ -59,6 +64,7 @@ async function main() {
       if (!r.analysis) {
         mvLines.push(`# 跳过（无识别结果）：${oldName}`);
         planned += 1;
+        items.push({ oldName, newName: "", status: "empty", note: "无识别结果" });
         console.log(`[${planned}/${images.length}] 完成：${oldName} 建议更名：跳过（无识别结果）`);
         nextToPlan += 1;
         continue;
@@ -66,7 +72,7 @@ async function main() {
 
       const suggested = planner.suggest(oldName, r.analysis);
       mvLines.push(suggested.mvLine);
-      operations.push(suggested.operation);
+      items.push({ oldName, newName: suggested.newName, status: "ok" });
       planned += 1;
       console.log(`[${planned}/${images.length}] 完成：${oldName} 建议更名：${suggested.newName}`);
       nextToPlan += 1;
@@ -105,37 +111,14 @@ async function main() {
 
   const output = mvLines.join("\n") + (mvLines.length ? "\n" : "");
 
-  // -r：强制写 rename.sh 作为日志（即使用户提供了 -s 其它文件名）
-  const finalSaveName = autoRename ? "rename.sh" : saveFileName;
-
-  if (finalSaveName) {
-    const outPath = path.resolve(cwd, finalSaveName);
-    await fs.writeFile(outPath, output, "utf8");
-    console.log(`已写入：${outPath}`);
-    if (!autoRename) {
-      console.log(`耗时：${((Date.now() - startedAt) / 1000).toFixed(1)}s`);
-      return;
-    }
+  if (html) {
+    const htmlPath = path.resolve(cwd, "rename.html");
+    await fs.writeFile(htmlPath, buildRenameHtml({ items }), "utf8");
+    console.log(`已生成：${htmlPath}`);
   }
 
-  if (!finalSaveName) {
-    console.log("已生成 mv 命令：");
-    process.stdout.write(output);
-  }
-
-  if (autoRename) {
-    // 自动执行重命名（仅在同目录内）
-    console.log(`开始执行改名（共 ${operations.length} 个）...`);
-    for (let i = 0; i < operations.length; i += 1) {
-      const op = operations[i];
-      const oldAbs = path.resolve(cwd, op.oldName);
-      const newAbs = path.resolve(cwd, op.newName);
-      console.log(`改名(${i + 1}/${operations.length})：${op.oldName} -> ${op.newName}`);
-      await fs.rename(oldAbs, newAbs);
-    }
-    console.log(`已执行改名，并记录到：${path.resolve(cwd, "rename.sh")}`);
-  }
-
+  console.log("已生成 mv 命令：");
+  process.stdout.write(output);
   console.log(`耗时：${((Date.now() - startedAt) / 1000).toFixed(1)}s`);
 }
 

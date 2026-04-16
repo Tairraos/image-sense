@@ -1,5 +1,5 @@
 node_modules
 .DS_Store
 *.log
-rename.sh
+rename.html
 package-lock.json
