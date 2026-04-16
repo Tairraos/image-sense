@@ -12,7 +12,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 
 import { getCliOptions } from "./options.js";
-import { listImageFiles, buildRenamePlan } from "./rename.js";
+import { listImageFiles, createRenamePlanner } from "./rename.js";
 import { analyzeImage } from "./vlm.js";
 
 async function main() {
@@ -28,12 +28,50 @@ async function main() {
     return;
   }
 
+  const planner = createRenamePlanner({ tokenOrder, existingNames });
+
   // 简单并发控制：避免一次性压爆本地模型
   const concurrency = 3;
   console.log(`发现 ${images.length} 张图片，开始识别（并发：${concurrency}）...`);
   const results = [];
   let index = 0;
   let done = 0;
+  let planned = 0;
+  let nextToPlan = 0;
+  /** @type {string[]} */
+  const mvLines = [];
+  /** @type {{ oldName: string, newName: string }[]} */
+  const operations = [];
+
+  function flushPlans() {
+    while (nextToPlan < images.length && results[nextToPlan]) {
+      const r = results[nextToPlan];
+      const oldName = path.basename(r.filePath);
+
+      if (r.error) {
+        mvLines.push(`# 跳过（识别失败）：${oldName}`);
+        planned += 1;
+        console.log(`[${planned}/${images.length}] 完成：${oldName} 建议更名：跳过（识别失败）`);
+        nextToPlan += 1;
+        continue;
+      }
+
+      if (!r.analysis) {
+        mvLines.push(`# 跳过（无识别结果）：${oldName}`);
+        planned += 1;
+        console.log(`[${planned}/${images.length}] 完成：${oldName} 建议更名：跳过（无识别结果）`);
+        nextToPlan += 1;
+        continue;
+      }
+
+      const suggested = planner.suggest(oldName, r.analysis);
+      mvLines.push(suggested.mvLine);
+      operations.push(suggested.operation);
+      planned += 1;
+      console.log(`[${planned}/${images.length}] 完成：${oldName} 建议更名：${suggested.newName}`);
+      nextToPlan += 1;
+    }
+  }
 
   async function worker() {
     while (true) {
@@ -46,29 +84,26 @@ async function main() {
         const analysis = await analyzeImage(filePath);
         results[current] = { filePath, analysis };
         done += 1;
-        console.log(`[${done}/${images.length}] 完成：${fileName}`);
+        console.log(`[${done}/${images.length}] 识别完成：${fileName}`);
+        flushPlans();
       } catch (err) {
         results[current] = { filePath, error: err };
         done += 1;
         console.error(
           `[${done}/${images.length}] 失败：${fileName} - ${err?.message || String(err)}`
         );
+        flushPlans();
       }
     }
   }
 
   await Promise.all(Array.from({ length: Math.min(concurrency, images.length) }, () => worker()));
 
-  console.log("识别完成，生成改名计划...");
-  const plan = buildRenamePlan(
-    results.map((r) => {
-      if (!r) return null;
-      return r;
-    }),
-    { tokenOrder, existingNames }
-  );
+  // 理论上已 flush 完，但这里再兜底一次
+  flushPlans();
+  console.log("识别完成，已生成全部改名建议。");
 
-  const output = plan.lines.join("\n") + (plan.lines.length ? "\n" : "");
+  const output = mvLines.join("\n") + (mvLines.length ? "\n" : "");
 
   // -r：强制写 rename.sh 作为日志（即使用户提供了 -s 其它文件名）
   const finalSaveName = autoRename ? "rename.sh" : saveFileName;
@@ -90,12 +125,12 @@ async function main() {
 
   if (autoRename) {
     // 自动执行重命名（仅在同目录内）
-    console.log(`开始执行改名（共 ${plan.operations.length} 个）...`);
-    for (let i = 0; i < plan.operations.length; i += 1) {
-      const op = plan.operations[i];
+    console.log(`开始执行改名（共 ${operations.length} 个）...`);
+    for (let i = 0; i < operations.length; i += 1) {
+      const op = operations[i];
       const oldAbs = path.resolve(cwd, op.oldName);
       const newAbs = path.resolve(cwd, op.newName);
-      console.log(`改名(${i + 1}/${plan.operations.length})：${op.oldName} -> ${op.newName}`);
+      console.log(`改名(${i + 1}/${operations.length})：${op.oldName} -> ${op.newName}`);
       await fs.rename(oldAbs, newAbs);
     }
     console.log(`已执行改名，并记录到：${path.resolve(cwd, "rename.sh")}`);

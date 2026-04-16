@@ -1,6 +1,6 @@
 {
   "name": "image-sense",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "使用本地 OpenAI 兼容 VLM（带视觉能力）批量识别图片并给出中文改名建议，输出/执行 mv 改名命令",
   "type": "module",
   "bin": {

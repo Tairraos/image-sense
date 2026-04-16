@@ -28,6 +28,65 @@ export async function listImageFiles(dir) {
 }
 
 /**
+ * 创建一个“改名规划器”，用于按顺序生成每个文件的唯一目标名（会自动处理重名后缀）。
+ * 适用于 CLI 在跑很久时逐条输出“建议更名”，同时保证最终 mv 命令与建议一致。
+ *
+ * @param {{ tokenOrder: ("c"|"p"|"b"|"n")[], existingNames?: Set<string> }} options
+ * @returns {{ suggest: (oldName: string, analysis: { personCount: number, pose: string, clothing: string, behavior: string }) => { newName: string, mvLine: string, operation: { oldName: string, newName: string } } }}
+ */
+export function createRenamePlanner(options) {
+  const tokenOrder = options.tokenOrder ?? [];
+  const useDefaultRule = tokenOrder.length === 0;
+
+  /** @type {Map<string, number>} key: 目标文件名（含扩展名） */
+  const usedNameCounter = new Map();
+  const reservedNames = new Set(options.existingNames ?? []);
+
+  return {
+    suggest(oldName, analysis) {
+      const ext = path.extname(oldName);
+
+      const personCount = Number.isFinite(analysis.personCount) ? analysis.personCount : 0;
+      const pose = sanitizeToken(analysis.pose);
+      const clothing = sanitizeToken(analysis.clothing);
+      const behavior = sanitizeToken(analysis.behavior);
+
+      /** @type {string[]} */
+      const tokens = [];
+
+      if (useDefaultRule) {
+        // 默认命名规则（未指定 -c/-p/-b/-n 时）
+        if (personCount <= 1) {
+          if (pose) tokens.push(pose);
+          if (clothing) tokens.push(clothing);
+          if (tokens.length === 0) tokens.push("单人照");
+        } else {
+          if (behavior) tokens.push(behavior);
+          else tokens.push("多人活动");
+        }
+      } else {
+        // 自定义命名规则（参数出现顺序即词序）
+        for (const flag of tokenOrder) {
+          if (flag === "c" && clothing) tokens.push(clothing);
+          if (flag === "p" && pose) tokens.push(pose);
+          if (flag === "b" && behavior) tokens.push(behavior);
+          if (flag === "n") tokens.push(toPeopleCountWord(personCount));
+        }
+        if (tokens.length === 0) tokens.push("未命名");
+      }
+
+      const baseName = tokens.join("_");
+      const desired = `${baseName}${ext}`;
+      const unique = toUniqueName(desired, usedNameCounter, reservedNames);
+      reservedNames.add(unique);
+
+      const mvLine = `mv "${oldName}" "${unique}"`;
+      return { newName: unique, mvLine, operation: { oldName, newName: unique } };
+    },
+  };
+}
+
+/**
  * @typedef {{
  *  filePath: string,
  *  analysis?: {
