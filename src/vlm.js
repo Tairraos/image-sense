@@ -8,13 +8,15 @@ import path from "node:path";
 import OpenAI from "openai";
 
 import { loadLocalModelConfig } from "./config.js";
+import { sanitizeToken, toPeopleCategory } from "./utils.js";
 
 /**
  * @typedef {{
- *   personCount: number;
- *   pose: string;
+ *   subject: string;
+ *   scene: string;
+ *   people: "无人"|"单人"|"双人"|"多人";
+ *   action: string;
  *   clothing: string;
- *   behavior: string;
  * }} ImageAnalysis
  */
 
@@ -52,12 +54,13 @@ export async function analyzeImage(filePath) {
   const prompt = [
     "你是一个用于图片重命名的视觉助手。",
     "请严格只输出一个 JSON 对象，不要输出任何额外文字。",
-    "要求：所有字段值使用中文、尽量简短、不要包含下划线、不要带句号/引号等多余标点。",
-    "请根据图片内容填写：",
-    "- personCount：图片中清晰可见的人物数量（整数，无法判断则填 0）",
-    "- pose：主要人物的姿势词（例如：下蹲、比心、举手、回头等）；多人时可为空",
-    "- clothing：主要人物穿着（如果是 cosplay 服装可用“超人装/女仆装”等；日常衣服用颜色+款式，如“黑色夹克/白色运动衫”）；无法判断可为空",
-    "- behavior：人物正在进行的活动/行为（例如：跑步、园艺活动、合影、对话、打球等）；单人也要填（尽量给一个动词短语）；无法判断可为空",
+    "要求：所有字段值使用中文、尽量简短，不要包含下划线，不要带句号/引号等多余标点。",
+    "请根据图片内容填写以下字段：",
+    "- subject：主体（例如：人物/猫咪/汽车/风景/建筑/食物…）",
+    "- scene：场景（例如：室内/室外/办公室/街头/卧室/森林/花园/天空…）",
+    "- personCount：图片中清晰可见的“人物”数量（整数；没有人物填 0；不确定填 0）",
+    "- action：动作或互动（单人：站立/行走/坐姿/跑步/拍照…；多人：合影/拥抱/聊天/玩耍/做饭/园艺…；无人时可为空）",
+    "- clothing：服装（尽量简洁；单人或多人都可填主角服装；无法判断可为空）",
   ].join("\n");
 
   const resp = await client.chat.completions.create({
@@ -80,11 +83,13 @@ export async function analyzeImage(filePath) {
 
   /** @type {any} */
   const parsed = JSON.parse(json);
+  const personCount = Number(parsed.personCount ?? 0);
   return {
-    personCount: Number(parsed.personCount ?? 0),
-    pose: String(parsed.pose ?? ""),
-    clothing: String(parsed.clothing ?? ""),
-    behavior: String(parsed.behavior ?? ""),
+    subject: sanitizeToken(parsed.subject ?? ""),
+    scene: sanitizeToken(parsed.scene ?? ""),
+    people: toPeopleCategory(personCount),
+    action: sanitizeToken(parsed.action ?? ""),
+    clothing: sanitizeToken(parsed.clothing ?? ""),
   };
 }
 
