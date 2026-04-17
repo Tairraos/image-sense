@@ -270,8 +270,8 @@ export function buildWebAppHtml(state) {
 
           const desc = document.createElement("div");
           desc.className = "desc";
-          desc.title = attrLine(it.attrs);
-          desc.textContent = attrLine(it.attrs);
+          desc.title = attrLine(it.attrs) + " [" + it.name + "]";
+          desc.textContent = attrLine(it.attrs) + " [" + it.name + "]";
           card.appendChild(desc);
 
           const controls = document.createElement("div");
