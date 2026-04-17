@@ -1,7 +1,7 @@
 {
   "name": "image-sense",
-  "version": "3.0.1",
-  "description": "使用本地 OpenAI 兼容 VLM（带视觉能力）批量识别图片并给出中文改名建议，输出/执行 mv 改名命令",
+  "version": "3.1.0",
+  "description": "使用本地 OpenAI 兼容 VLM（带视觉能力）批量识别图片属性并启动临时 Web 服务，在浏览器里批量改名",
   "type": "module",
   "bin": {
     "image-sense": "src/cli.js"

@@ -64,7 +64,7 @@ async function main() {
         results[current] = { filePath, analysis };
         done += 1;
         console.log(
-          `[${done}/${images.length}] 完成：${fileName} 属性：主体=${analysis.subject || "未知"} 场景=${analysis.scene || "未知"} 人数=${analysis.people || "未知"} 动作或互动=${analysis.action || "未知"} 服装=${analysis.clothing || "未知"}`
+          `[${done}/${images.length}] 完成：${fileName} 属性：主体=${analysis.subject || "未知"} 场景=${analysis.scene || "未知"} 人数=${analysis.people || "未知"} 动作或互动=${analysis.action || "未知"} 宠物=${analysis.pet || "无"} 服装=${analysis.clothing || "未知"}`
         );
       } catch (err) {
         results[current] = { filePath, error: err };
@@ -86,6 +86,7 @@ async function main() {
     scene: true,
     people: true,
     action: true,
+    pet: true,
     clothing: true,
   };
 
@@ -101,6 +102,7 @@ async function main() {
       scene: analysis.scene || "",
       people: analysis.people || "",
       action: analysis.action || "",
+      pet: analysis.pet || "",
       clothing: analysis.clothing || "",
     };
 

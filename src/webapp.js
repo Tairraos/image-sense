@@ -8,6 +8,7 @@
  *   scene: string;
  *   people: string;
  *   action: string;
+ *   pet: string;
  *   clothing: string;
  * }} ImageAttrs
  */
@@ -189,6 +190,8 @@ export function buildWebAppHtml(state) {
         <span class="label">-</span>
         <button class="btn active" data-t="action">[动作或互动]</button>
         <span class="label">-</span>
+        <button class="btn active" data-t="pet">[宠物]</button>
+        <span class="label">-</span>
         <button class="btn active" data-t="clothing">[服装]</button>
       </div>
     </div>
@@ -211,6 +214,7 @@ export function buildWebAppHtml(state) {
         scene: true,
         people: true,
         action: true,
+        pet: true,
         clothing: true,
       };
 
@@ -230,6 +234,7 @@ export function buildWebAppHtml(state) {
         if (template.scene) parts.push(sanitizePart(attrs.scene));
         if (template.people) parts.push(sanitizePart(attrs.people));
         if (template.action) parts.push(sanitizePart(attrs.action));
+        if (template.pet) parts.push(sanitizePart(attrs.pet));
         if (template.clothing) parts.push(sanitizePart(attrs.clothing));
         const out = parts.filter(Boolean).join("-");
         return out || "未命名";
@@ -241,9 +246,10 @@ export function buildWebAppHtml(state) {
           scene: attrs.scene || "未知",
           people: attrs.people || "未知",
           action: attrs.action || "未知",
+          pet: attrs.pet || "无",
           clothing: attrs.clothing || "未知",
         };
-        return [a.subject, a.scene, a.people, a.action, a.clothing].join("-");
+        return [a.subject, a.scene, a.people, a.action, a.pet, a.clothing].join("-");
       }
 
       function applyTemplateToSelected() {

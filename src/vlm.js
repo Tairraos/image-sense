@@ -16,6 +16,7 @@ import { sanitizeToken, toPeopleCategory } from "./utils.js";
  *   scene: string;
  *   people: "无人"|"单人"|"双人"|"多人";
  *   action: string;
+ *   pet: string;
  *   clothing: string;
  * }} ImageAnalysis
  */
@@ -57,9 +58,10 @@ export async function analyzeImage(filePath) {
     "要求：所有字段值使用中文、尽量简短，不要包含下划线，不要带句号/引号等多余标点。",
     "请根据图片内容填写以下字段：",
     "- subject：主体（例如：人物/猫咪/汽车/风景/建筑/食物…）",
-    "- scene：场景（例如：室内/室外/办公室/街头/卧室/森林/花园/天空…）",
+    "- scene：场景（例如：办公室/健身房/卧室/室内/花园/海边/院子里/街头/厨房/森林/公园/天空/太空…）",
     "- personCount：图片中清晰可见的“人物”数量（整数；没有人物填 0；不确定填 0）",
-    "- action：动作或互动（单人：站立/行走/坐姿/跑步/拍照…；多人：散步/喝茶/烘焙/园艺/依偎/荡秋千/做饭/拥抱/聊天/合影/插花/玩耍…；无人时可为空）",
+    "- action：动作或互动（单人：站立/散步/健身/跑步/拍照/摆姿势…；多人：散步/喝茶/烘焙/园艺/依偎/荡秋千/做饭/拥抱/聊天/合影/插花/玩耍…；无人时可为空）",
+    "- pet：宠物（如果画面中有猫/狗等宠物，请用简短词，如：猫咪/狗狗/小猫/小狗；没有则留空）",
     "- clothing：服装（尽量简洁；单人或多人都可填主角服装；无法判断可为空）",
   ].join("\n");
 
@@ -89,6 +91,7 @@ export async function analyzeImage(filePath) {
     scene: sanitizeToken(parsed.scene ?? ""),
     people: toPeopleCategory(personCount),
     action: sanitizeToken(parsed.action ?? ""),
+    pet: sanitizeToken(parsed.pet ?? ""),
     clothing: sanitizeToken(parsed.clothing ?? ""),
   };
 }

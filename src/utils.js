@@ -62,9 +62,10 @@ export function sanitizeFileBaseName(input) {
  *   scene: string,
  *   people: string,
  *   action: string,
+ *   pet: string,
  *   clothing: string
  * }} attrs
- * @param {{ subject: boolean, scene: boolean, people: boolean, action: boolean, clothing: boolean }} template
+ * @param {{ subject: boolean, scene: boolean, people: boolean, action: boolean, pet: boolean, clothing: boolean }} template
  * @returns {string}
  */
 export function buildBaseNameFromAttrs(attrs, template) {
@@ -73,6 +74,7 @@ export function buildBaseNameFromAttrs(attrs, template) {
   if (template.scene) parts.push(sanitizeToken(attrs.scene));
   if (template.people) parts.push(sanitizeToken(attrs.people));
   if (template.action) parts.push(sanitizeToken(attrs.action));
+  if (template.pet) parts.push(sanitizeToken(attrs.pet));
   if (template.clothing) parts.push(sanitizeToken(attrs.clothing));
 
   const out = parts.filter(Boolean).join("-");

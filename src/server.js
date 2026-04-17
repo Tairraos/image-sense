@@ -18,6 +18,7 @@ import { buildWebAppHtml } from "./webapp.js";
  *   scene: string;
  *   people: string;
  *   action: string;
+ *   pet: string;
  *   clothing: string;
  * }} ImageAttrs
  */
